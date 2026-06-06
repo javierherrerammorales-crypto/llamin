@@ -25,7 +25,10 @@ export default function Navbar() {
       {/* Desktop sidebar */}
       <nav className="hidden md:flex flex-col fixed left-0 top-0 h-full w-56 bg-white border-r border-crema shadow-sm z-40 py-6 px-4">
         <div className="mb-8 text-center">
-          <span className="text-2xl font-black text-terracota">🦙 Llamín</span>
+          <div className="flex items-center gap-2">
+              <img src="/llamin-mascot.png" alt="Llamín" width={40} height={40} style={{objectFit:'contain'}} onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display='none'}} />
+              <span className="text-2xl font-black text-terracota">Llamín</span>
+            </div>
           <p className="text-xs text-gray-400 mt-1">Tu llama financiera peruana</p>
         </div>
         <div className="flex flex-col gap-1 flex-1">
