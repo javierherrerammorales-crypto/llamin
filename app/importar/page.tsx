@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { categorizarDescripcion } from '@/lib/categorizer'
@@ -23,6 +23,10 @@ export default function ImportarPage() {
   const [paso, setPaso] = useState<'upload' | 'preview' | 'guardando' | 'listo'>('upload')
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
+  const [pdfPendiente, setPdfPendiente] = useState<File | null>(null)
+  const [pdfContrasena, setPdfContrasena] = useState('')
+  const [pdfError, setPdfError] = useState('')
+  const dniInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const init = async () => {
@@ -34,6 +38,12 @@ export default function ImportarPage() {
     }
     init()
   }, [router])
+
+  useEffect(() => {
+    if (pdfPendiente) {
+      setTimeout(() => dniInputRef.current?.focus(), 100)
+    }
+  }, [pdfPendiente])
 
   const normalizarFecha = (f: string): string => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(f)) return f
@@ -105,7 +115,7 @@ export default function ImportarPage() {
     return rows
   }
 
-  const parsearPDF = async (file: File): Promise<FilaPreview[]> => {
+  const parsearPDF = async (file: File, password?: string): Promise<FilaPreview[]> => {
     if (!(window as any).pdfjsLib) {
       await new Promise<void>((resolve, reject) => {
         const script = document.createElement('script')
@@ -117,8 +127,14 @@ export default function ImportarPage() {
     }
     const pdfjsLib = (window as any).pdfjsLib
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+
     const buffer = await file.arrayBuffer()
-    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise
+    const loadingTask = pdfjsLib.getDocument({
+      data: new Uint8Array(buffer),
+      ...(password ? { password } : {}),
+    })
+
+    const pdf = await loadingTask.promise
     let fullText = ''
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i)
@@ -159,10 +175,40 @@ export default function ImportarPage() {
         setFilas(rows)
         setPaso('preview')
       } catch (err: any) {
-        setError('Error al leer el PDF: ' + (err.message || 'intenta con CSV o Excel'))
+        const msg = err.message || ''
+        if (msg.includes('password') || msg.includes('Password') || msg.includes('encrypted')) {
+          setPdfPendiente(file)
+          setPdfContrasena('')
+          setPdfError('')
+        } else {
+          setError('Error al leer el PDF: ' + msg)
+        }
       }
     } else {
       setError('Solo se aceptan archivos CSV, Excel (.xlsx, .xls) o PDF')
+    }
+  }
+
+  const abrirPDFConContrasena = async () => {
+    if (!pdfPendiente || !pdfContrasena.trim()) return
+    setPdfError('')
+    try {
+      const rows = await parsearPDF(pdfPendiente, pdfContrasena.trim())
+      if (rows.length === 0) {
+        setPdfError('PDF abierto pero no se encontraron transacciones. Prueba con CSV.')
+        return
+      }
+      setPdfPendiente(null)
+      setPdfContrasena('')
+      setFilas(rows)
+      setPaso('preview')
+    } catch (err: any) {
+      const msg = err.message || ''
+      if (msg.includes('password') || msg.includes('Password') || msg.includes('incorrect')) {
+        setPdfError('DNI incorrecto. Verifica e intenta de nuevo.')
+      } else {
+        setPdfError('Error: ' + msg)
+      }
     }
   }
 
@@ -215,21 +261,66 @@ export default function ImportarPage() {
         {paso === 'upload' && (
           <>
             {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-4 text-sm">{error}</div>}
-            <div
-              onDragOver={e => { e.preventDefault(); setDragging(true) }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={onDrop}
-              className={`border-4 border-dashed rounded-3xl p-12 text-center transition-all cursor-pointer ${
-                dragging ? 'border-terracota bg-red-50' : 'border-gray-300 bg-white hover:border-dorado hover:bg-amber-50'
-              }`}
-              onClick={() => document.getElementById('fileInput')?.click()}
-            >
-              <input id="fileInput" type="file" accept=".csv,.xlsx,.xls,.txt,.pdf" className="hidden" onChange={onFileInput} />
-              <LlaminMascot expresion="analizando" size={80} className="mx-auto mb-4" />
-              <p className="text-xl font-black text-marron mb-2">Arrastra tu archivo aquí</p>
-              <p className="text-gray-500 text-sm mb-4">o haz clic para seleccionarlo</p>
-              <p className="text-xs text-gray-400">Formatos: CSV, Excel (.xlsx, .xls), PDF • BCP, Interbank, BBVA, Scotiabank, Yape</p>
-            </div>
+
+            {pdfPendiente ? (
+              <div className="bg-white rounded-2xl shadow-sm border-2 border-dorado p-6 mb-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <LlaminMascot expresion="analizando" size={60} />
+                  <div>
+                    <p className="font-black text-marron text-lg">Este PDF está protegido 🔒</p>
+                    <p className="text-sm text-gray-500">Los extractos bancarios peruanos usan tu DNI como contraseña</p>
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-bold text-marron mb-2">Ingresa tu DNI (contraseña del PDF)</label>
+                  <input
+                    ref={dniInputRef}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={8}
+                    value={pdfContrasena}
+                    onChange={e => setPdfContrasena(e.target.value.replace(/\D/g, ''))}
+                    onKeyDown={e => e.key === 'Enter' && abrirPDFConContrasena()}
+                    placeholder="Ej: 12345678"
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-lg font-mono tracking-widest focus:outline-none focus:border-terracota"
+                  />
+                  {pdfError && <p className="text-red-600 text-sm mt-2">{pdfError}</p>}
+                  <p className="text-xs text-gray-400 mt-2">🔐 Tu DNI solo se usa localmente para abrir el PDF, nunca se envía a ningún servidor</p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setPdfPendiente(null); setPdfContrasena(''); setPdfError('') }}
+                    className="flex-1 border-2 border-gray-300 text-gray-600 font-bold py-3 rounded-xl hover:border-terracota hover:text-terracota transition-all"
+                  >
+                    ← Cancelar
+                  </button>
+                  <button
+                    onClick={abrirPDFConContrasena}
+                    disabled={pdfContrasena.length < 7}
+                    className="flex-1 bg-terracota text-white font-black py-3 rounded-xl hover:opacity-90 transition-all shadow-lg disabled:opacity-40"
+                  >
+                    🔓 Abrir PDF
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                onDragOver={e => { e.preventDefault(); setDragging(true) }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={onDrop}
+                className={`border-4 border-dashed rounded-3xl p-12 text-center transition-all cursor-pointer ${
+                  dragging ? 'border-terracota bg-red-50' : 'border-gray-300 bg-white hover:border-dorado hover:bg-amber-50'
+                }`}
+                onClick={() => document.getElementById('fileInput')?.click()}
+              >
+                <input id="fileInput" type="file" accept=".csv,.xlsx,.xls,.txt,.pdf" className="hidden" onChange={onFileInput} />
+                <LlaminMascot expresion="analizando" size={80} className="mx-auto mb-4" />
+                <p className="text-xl font-black text-marron mb-2">Arrastra tu archivo aquí</p>
+                <p className="text-gray-500 text-sm mb-4">o haz clic para seleccionarlo</p>
+                <p className="text-xs text-gray-400">Formatos: CSV, Excel (.xlsx, .xls), PDF • BCP, Interbank, BBVA, Scotiabank, Yape</p>
+              </div>
+            )}
+
             <div className="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-5">
               <p className="font-bold text-amber-800 mb-2">💡 ¿Cómo descargar tu extracto?</p>
               <ul className="text-sm text-amber-700 space-y-1">
