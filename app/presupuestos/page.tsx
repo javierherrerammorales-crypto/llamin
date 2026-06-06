@@ -39,7 +39,7 @@ export default function PresupuestosPage() {
       setPresupuestos(presu || [])
 
       const g: Record<string, number> = {}
-      for (const t of (txs || []) as Transaccion[]) {
+      for (const t of (txs || []) as any[]) {
         const nombre = t.categorias?.nombre || 'Otros'
         g[nombre] = (g[nombre] || 0) + Number(t.monto)
       }
