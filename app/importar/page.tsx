@@ -35,16 +35,23 @@ export default function ImportarPage() {
     init()
   }, [router])
 
+  const normalizarFecha = (f: string): string => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(f)) return f
+    const partes = f.split(/[\/\-]/)
+    if (partes.length === 3) {
+      if (partes[2].length === 4) return `${partes[2]}-${partes[1].padStart(2,'0')}-${partes[0].padStart(2,'0')}`
+      if (partes[0].length === 4) return `${partes[0]}-${partes[1].padStart(2,'0')}-${partes[2].padStart(2,'0')}`
+    }
+    return new Date().toISOString().split('T')[0]
+  }
+
   const parsearCSV = (text: string): FilaPreview[] => {
     const lines = text.trim().split('\n').filter(l => l.trim())
     if (lines.length < 2) return []
     const rows: FilaPreview[] = []
-
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(/[,;|\t]/).map(c => c.replace(/"/g, '').trim())
       if (cols.length < 3) continue
-
-      // Try to find date, description, amount in columns
       let fecha = '', descripcion = '', monto = 0
       for (const col of cols) {
         if (/^\d{2}[\/\-]\d{2}[\/\-]\d{2,4}$/.test(col) || /^\d{4}-\d{2}-\d{2}$/.test(col)) {
@@ -58,11 +65,9 @@ export default function ImportarPage() {
           descripcion = col
         }
       }
-
       if (!fecha) fecha = new Date().toISOString().split('T')[0]
       if (!descripcion) descripcion = cols.join(' ')
       if (monto <= 0) continue
-
       const catNombre = categorizarDescripcion(descripcion)
       const cat = categorias.find(c => c.nombre === catNombre) || categorias.find(c => c.nombre === 'Otros')
       rows.push({ fecha: normalizarFecha(fecha), descripcion, monto, categoria: catNombre, categoria_id: cat?.id || null })
@@ -70,20 +75,63 @@ export default function ImportarPage() {
     return rows
   }
 
-  const normalizarFecha = (f: string): string => {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(f)) return f
-    const partes = f.split(/[\/\-]/)
-    if (partes.length === 3) {
-      if (partes[2].length === 4) return `${partes[2]}-${partes[1].padStart(2,'0')}-${partes[0].padStart(2,'0')}`
-      if (partes[0].length === 4) return `${partes[0]}-${partes[1].padStart(2,'0')}-${partes[2].padStart(2,'0')}`
+  const parsearTexto = (text: string): FilaPreview[] => {
+    const rows: FilaPreview[] = []
+    const lines = text.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean)
+    const datePattern = /(\d{2}[\/\-]\d{2}[\/\-]\d{2,4})/
+    for (const line of lines) {
+      const dateMatch = line.match(datePattern)
+      if (!dateMatch) continue
+      const amtRx = /(\d{1,3}(?:[,.]\d{3})*[,.]\d{2})/g
+      const amounts: number[] = []
+      let m: RegExpExecArray | null
+      while ((m = amtRx.exec(line)) !== null) {
+        const val = parseFloat(m[1].replace(/\./g, '').replace(',', '.'))
+        if (val > 0 && val < 100000) amounts.push(val)
+      }
+      if (amounts.length === 0) continue
+      const monto = amounts[amounts.length - 1]
+      const descripcion = line
+        .replace(dateMatch[0], '')
+        .replace(/(\d{1,3}(?:[,.]\d{3})*[,.]\d{2})/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+      if (descripcion.length < 2) continue
+      const fecha = normalizarFecha(dateMatch[1])
+      const catNombre = categorizarDescripcion(descripcion)
+      const cat = categorias.find(c => c.nombre === catNombre) || categorias.find(c => c.nombre === 'Otros')
+      rows.push({ fecha, descripcion, monto, categoria: catNombre, categoria_id: cat?.id || null })
     }
-    return new Date().toISOString().split('T')[0]
+    return rows
+  }
+
+  const parsearPDF = async (file: File): Promise<FilaPreview[]> => {
+    if (!(window as any).pdfjsLib) {
+      await new Promise<void>((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+        script.onload = () => resolve()
+        script.onerror = () => reject(new Error('No se pudo cargar el lector de PDF'))
+        document.head.appendChild(script)
+      })
+    }
+    const pdfjsLib = (window as any).pdfjsLib
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+    const buffer = await file.arrayBuffer()
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise
+    let fullText = ''
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i)
+      const content = await page.getTextContent()
+      const pageText = content.items.map((item: any) => item.str || '').join(' ')
+      fullText += pageText + '\n'
+    }
+    return parsearTexto(fullText)
   }
 
   const procesarArchivo = async (file: File) => {
     setError('')
     const ext = file.name.split('.').pop()?.toLowerCase()
-
     if (ext === 'csv' || ext === 'txt') {
       const text = await file.text()
       const rows = parsearCSV(text)
@@ -101,8 +149,20 @@ export default function ImportarPage() {
       if (rows.length === 0) { setError('No se encontraron transacciones válidas en el Excel.'); return }
       setFilas(rows)
       setPaso('preview')
+    } else if (ext === 'pdf') {
+      try {
+        const rows = await parsearPDF(file)
+        if (rows.length === 0) {
+          setError('No se encontraron transacciones en el PDF. Intenta exportar como CSV desde tu banco.')
+          return
+        }
+        setFilas(rows)
+        setPaso('preview')
+      } catch (err: any) {
+        setError('Error al leer el PDF: ' + (err.message || 'intenta con CSV o Excel'))
+      }
     } else {
-      setError('Solo se aceptan archivos CSV o Excel (.xlsx, .xls)')
+      setError('Solo se aceptan archivos CSV, Excel (.xlsx, .xls) o PDF')
     }
   }
 
@@ -138,13 +198,10 @@ export default function ImportarPage() {
     }))
     const { error: err } = await supabase.from('transacciones').insert(registros)
     if (err) { setError('Error al guardar: ' + err.message); setPaso('preview'); return }
-
-    // Actualizar racha
     await supabase.from('profiles').update({
       ultima_actividad: new Date().toISOString().split('T')[0],
       puntos: 10,
     }).eq('id', userId)
-
     setPaso('listo')
   }
 
@@ -153,7 +210,7 @@ export default function ImportarPage() {
       <Navbar />
       <main className="md:ml-56 p-4 md:p-8 pb-24 md:pb-8">
         <h1 className="text-2xl font-black text-marron mb-2">Importar extracto 📂</h1>
-        <p className="text-gray-500 text-sm mb-6">Sube tu estado de cuenta del banco o Yape en formato CSV o Excel</p>
+        <p className="text-gray-500 text-sm mb-6">Sube tu estado de cuenta del banco o Yape en formato CSV, Excel o PDF</p>
 
         {paso === 'upload' && (
           <>
@@ -167,13 +224,12 @@ export default function ImportarPage() {
               }`}
               onClick={() => document.getElementById('fileInput')?.click()}
             >
-              <input id="fileInput" type="file" accept=".csv,.xlsx,.xls,.txt" className="hidden" onChange={onFileInput} />
+              <input id="fileInput" type="file" accept=".csv,.xlsx,.xls,.txt,.pdf" className="hidden" onChange={onFileInput} />
               <LlaminMascot expresion="analizando" size={80} className="mx-auto mb-4" />
               <p className="text-xl font-black text-marron mb-2">Arrastra tu archivo aquí</p>
               <p className="text-gray-500 text-sm mb-4">o haz clic para seleccionarlo</p>
-              <p className="text-xs text-gray-400">Formatos: CSV, Excel (.xlsx, .xls) • BCP, Interbank, BBVA, Scotiabank, Yape</p>
+              <p className="text-xs text-gray-400">Formatos: CSV, Excel (.xlsx, .xls), PDF • BCP, Interbank, BBVA, Scotiabank, Yape</p>
             </div>
-
             <div className="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-5">
               <p className="font-bold text-amber-800 mb-2">💡 ¿Cómo descargar tu extracto?</p>
               <ul className="text-sm text-amber-700 space-y-1">
@@ -196,9 +252,7 @@ export default function ImportarPage() {
                   <p className="text-sm text-gray-500">Revisa las categorías y corrige si es necesario</p>
                 </div>
               </div>
-
               {error && <div className="bg-red-50 text-red-700 rounded-xl p-3 mb-3 text-sm">{error}</div>}
-
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -230,7 +284,6 @@ export default function ImportarPage() {
                 </table>
               </div>
             </div>
-
             <div className="flex gap-3">
               <button onClick={() => { setFilas([]); setPaso('upload') }}
                 className="flex-1 border-2 border-gray-300 text-gray-600 font-bold py-3 rounded-xl hover:border-terracota hover:text-terracota transition-all">
@@ -254,7 +307,7 @@ export default function ImportarPage() {
         {paso === 'listo' && (
           <div className="text-center py-12">
             <LlaminMascot expresion="emocionada" size={120} className="mx-auto mb-4" />
-            <h2 className="text-2xl font-black text-marron mb-2">¡Todo listo, causa! 🎉</h2>
+            <h2 className="text-2xl font-black text-marron mb-2">¡Todo listo! 🎉</h2>
             <p className="text-gray-600 mb-6">Se guardaron {filas.length} movimientos. ¡Llamín está feliz!</p>
             <div className="flex gap-3 justify-center flex-wrap">
               <button onClick={() => { setFilas([]); setPaso('upload') }}
