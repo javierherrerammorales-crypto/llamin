@@ -187,7 +187,7 @@ export default function Dashboard() {
         {/* CTA si no hay datos */}
         {transacciones.length === 0 && presupuestos.length === 0 && (
           <div className="bg-gradient-to-r from-terracota to-amber-600 text-white rounded-2xl p-6 text-center shadow-lg">
-            <p className="text-2xl mb-2">🦙</p>
+            <LlaminMascot expresion="feliz" size={80} className="mx-auto mb-2" />
             <p className="font-black text-lg">{`¡Empecemos, ${profile!.nombre}!`}</p>
             <p className="text-sm opacity-90 mt-1 mb-4">Sube tu extracto bancario y Llamín se encarga del resto</p>
             <Link href="/importar" className="inline-block bg-white text-terracota font-black px-6 py-3 rounded-xl hover:opacity-90 transition-all">
