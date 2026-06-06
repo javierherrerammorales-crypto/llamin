@@ -104,7 +104,7 @@ export default function PresupuestosPage() {
           <div className="flex flex-col gap-3 mb-6">
             {presupuestos.length === 0 && (
               <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-crema">
-                <LlaminMascot expresion="pensando" size={80} className="mx-auto mb-3" />
+                <LlaminMascot expresion="analizando" size={80} className="mx-auto mb-3" />
                 <p className="text-gray-500 text-sm">Aún no tienes presupuestos. ¡Crea el primero!</p>
               </div>
             )}
