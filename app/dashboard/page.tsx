@@ -93,7 +93,7 @@ export default function Dashboard() {
             <LlaminMascot expresion={expresion as any} size={80} />
             <div>
               <p className="font-bold text-marron text-sm">
-                {pctGastado <= 60 ? '¡Vas bacán, causa!' :
+                {pctGastado <= 60 ? `¡Vas bacán, ${profile!.nombre}!` :
                  pctGastado <= 80 ? 'Ojo con los gastos' :
                  pctGastado <= 100 ? '¡Ya casi el límite!' : '¡Presupuesto superado!'}
               </p>
@@ -188,7 +188,7 @@ export default function Dashboard() {
         {transacciones.length === 0 && presupuestos.length === 0 && (
           <div className="bg-gradient-to-r from-terracota to-amber-600 text-white rounded-2xl p-6 text-center shadow-lg">
             <p className="text-2xl mb-2">🦙</p>
-            <p className="font-black text-lg">¡Empecemos, causa!</p>
+            <p className="font-black text-lg">{`¡Empecemos, ${profile!.nombre}!`}</p>
             <p className="text-sm opacity-90 mt-1 mb-4">Sube tu extracto bancario y Llamín se encarga del resto</p>
             <Link href="/importar" className="inline-block bg-white text-terracota font-black px-6 py-3 rounded-xl hover:opacity-90 transition-all">
               📂 Importar mi primer extracto
