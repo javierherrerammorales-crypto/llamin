@@ -843,7 +843,7 @@ export default function ImportarPage() {
 
               {/* Grid de métricas principales */}
                             {/* Línea de crédito - 3 cajitas */}
-              {estadoTC.resumen.lineaCredito > 0 && (
+              {(estadoTC.resumen.lineaCredito > 0 || estadoTC.resumen.saldoDisponible > 0 || estadoTC.resumen.lineaUtilizada > 0) && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                   <div className="bg-white/10 rounded-2xl p-4">
                     <p className="text-xs text-amber-300 mb-1">Tu <b>línea de crédito</b> actual es:</p>
