@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Transaccion, Categoria } from '@/lib/types'
@@ -66,6 +66,38 @@ export default function TransaccionesPage() {
     setSelectedIds(new Set())
   }
 
+  const filtradas = useMemo(() =>
+    filtroCat
+      ? transacciones.filter(t => t.categorias?.nombre === filtroCat)
+      : transacciones,
+    [transacciones, filtroCat]
+  )
+
+  const total = useMemo(() =>
+    filtradas.reduce((s, t) => s + Number(t.monto), 0),
+    [filtradas]
+  )
+
+  const { conteoPorCat, promPorCat } = useMemo(() => {
+    const sumaPorCat: Record<string, number> = {}
+    const conteoPorCat: Record<string, number> = {}
+    for (const t of filtradas) {
+      const k = t.categoria_id || 'sin'
+      sumaPorCat[k] = (sumaPorCat[k] || 0) + Number(t.monto)
+      conteoPorCat[k] = (conteoPorCat[k] || 0) + 1
+    }
+    const promPorCat: Record<string, number> = {}
+    for (const k in sumaPorCat) {
+      promPorCat[k] = sumaPorCat[k] / conteoPorCat[k]
+    }
+    return { conteoPorCat, promPorCat }
+  }, [filtradas])
+
+  const esSobrePromedio = useCallback((t: Transaccion) => {
+    const k = t.categoria_id || 'sin'
+    return conteoPorCat[k] > 1 && Number(t.monto) > promPorCat[k]
+  }, [conteoPorCat, promPorCat])
+
   const toggleSelect = (id: string, idx: number, shiftKey: boolean) => {
     setSelectedIds(prev => {
       const next = new Set(prev)
@@ -94,30 +126,6 @@ export default function TransaccionesPage() {
     } else {
       setSelectedIds(new Set(filtradas.map(t => t.id)))
     }
-  }
-
-  const filtradas = filtroCat
-    ? transacciones.filter(t => t.categorias?.nombre === filtroCat)
-    : transacciones
-
-  const total = filtradas.reduce((s, t) => s + Number(t.monto), 0)
-
-  // Calcular promedio por categoría para resaltar los que están sobre el promedio
-  const sumaPorCat: Record<string, number> = {}
-  const conteoPorCat: Record<string, number> = {}
-  for (const t of filtradas) {
-    const k = t.categoria_id || 'sin'
-    sumaPorCat[k] = (sumaPorCat[k] || 0) + Number(t.monto)
-    conteoPorCat[k] = (conteoPorCat[k] || 0) + 1
-  }
-  const promPorCat: Record<string, number> = {}
-  for (const k in sumaPorCat) {
-    promPorCat[k] = sumaPorCat[k] / conteoPorCat[k]
-  }
-
-  const esSobrePromedio = (t: Transaccion) => {
-    const k = t.categoria_id || 'sin'
-    return conteoPorCat[k] > 1 && Number(t.monto) > promPorCat[k]
   }
 
   return (
