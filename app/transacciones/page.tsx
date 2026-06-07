@@ -27,13 +27,13 @@ const TransaccionRow = memo(function TransaccionRow({ t, idx, seleccionado, sobr
         onChange={() => {}}
         className="w-4 h-4 rounded accent-terracota flex-shrink-0 cursor-pointer"
       />
-      <span className="text-2xl flex-shrink-0">{t.categorias?.icono || '📦'}</span>
+      <span className="text-2xl flex-shrink-0">{t.categorias?.icono || 'ð¦'}</span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="font-semibold text-gray-800 text-sm truncate">{t.descripcion}</p>
           {sobrePromedio && (
             <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">
-              ↑ sobre prom.
+              â sobre prom.
             </span>
           )}
         </div>
@@ -46,40 +46,48 @@ const TransaccionRow = memo(function TransaccionRow({ t, idx, seleccionado, sobr
             className="border border-terracota rounded-lg px-2 py-0.5 text-xs mt-1 focus:outline-none">
             {categorias.map(c => <option key={c.id} value={c.id}>{c.icono} {c.nombre}</option>)}
           </select>
-   1�
-H�
-��]ۂ�ې�X��^�HO��K�����Y�][ۊ
-N�۔�]Y][��Y
-�Y
-H_B��\�Ә[YOH�^^�^Yܘ^KMݙ\��^]\��X��H]L�H�[��][ۋX��ܜȏ�����]Y�ܚX\�˛��X��H	��[��]Y�ܰ�XI�H8�(����X�_H8�#��#؝]ۏ��
-_B��]���]��\�Ә[YOH��^][\�X�[�\��\L��^\��[��L����[��\�Ә[YOH��۝X�X��^]\��X��H^\�H����ӝ[X�\��[۝�K�њ^Y
-�_O��[����]ۂ�ې�X��^�HO��K�����Y�][ۊ
-N�ۑ[[Z[�\��Y
-H_B��\�Ә[YOH�^Yܘ^KL�ݙ\��^\�YM^[�XY[��[�ۙH�[��][ۋX��ܜȏ��0�؝]ۏ���]����]���
-B�JB��^ܝY�][�[��[ۈ�[��X��[ۙ\�Y�J
-H�ۜ���]\�H\�T��]\�
-B��ۜ���[��X��[ۙ\��]�[��X��[ۙ\�HH\�T�]O�[��X��[ۖ�O��JB��ۜ���]Y�ܚX\��]�]Y�ܚX\�HH\�T�]O�]Y�ܚXV�O��JB��ۜ���Y[���]�Y[��HH\�T�]J�YJB��ۜ�ٚ[��Y\��]�[��Y\�HH\�T�]J�]�]J
-K��][۝
+        ) : (
+          <button
+            onClick={e => { e.stopPropagation(); onSetEditandoId(t.id) }}
+            className="text-xs text-gray-400 hover:text-terracota mt-0.5 transition-colors">
+            {t.categorias?.nombre || 'Sin categorÃ­a'} â¢ {t.fecha} âï¸
+          </button>
+        )}
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span className="font-black text-terracota text-sm">S/ {Number(t.monto).toFixed(2)}</span>
+        <button
+          onClick={e => { e.stopPropagation(); onEliminar(t.id) }}
+          className="text-gray-300 hover:text-red-400 text-lg leading-none transition-colors">
+          Ã
+        </button>
+      </div>
+    </div>
+  )
+})
 
-H
-�JB��ۜ�ٚ[��[��HH\�T�]J�]�]J
-K��]�[YX\�
-JB��ۜ�ٚ[���]�]�[���]HH\�T�]J	��B��ۜ��Y][��Y�]Y][��YHH\�T�]O��[���[��[
-B��ۜ���[X�YY��]�[X�YY�HH\�T�]O�]��[�Ϗ��]��]
+export default function TransaccionesPage() {
+  const router = useRouter()
+  const [transacciones, setTransacciones] = useState<Transaccion[]>([])
+  const [categorias, setCategorias] = useState<Categoria[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filtroMes, setFiltroMes] = useState(new Date().getMonth() + 1)
+  const [filtroAno] = useState(new Date().getFullYear())
+  const [filtroCat, setFiltroCat] = useState('')
+  const [editandoId, setEditandoId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const lastClickedIdxRef = useRef<number | null>(null)
 
-JB��ۜ�\��X��YY�Y�H\�T�Y��[X�\��[��[
-B���ۜ�Y\�\�H��[�I�	љX��	�X\��	�X���	�X^I�	ҝ[��	ҝ[	�	�Y���	��\	�	���	�	ӛ݉�	�X��B��\�QY��X�
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
+  useEffect(() => {
+    const load = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { router.push('/'); return }
+      const uid = session.user.id
 
-HO��ۜ��YH\�[��
-
-HO��ۜ��]N���\��[ۈHHH]�Z]�\X�\�K�]]��]�\��[ۊ
-B�Y�
-\�\��[ۊH���]\��\�
-	���N��]\��B��ۜ�ZYH�\��[ۋ�\�\��Y���ۜ�[�X�[�Y\�H	ٚ[��[��KI���[���[��Y\�K�Y�\�
-�	�	�_KLX��ۜ��[�Y\�H�]�]J�[��[���[��Y\�
-K��T����[��
-K��Yt('T')[0]
+      const inicioMes = `${filtroAno}-${String(filtroMes).padStart(2,'0')}-01`
+      const finMes = new Date(filtroAno, filtroMes, 0).toISOString().split('T')[0]
 
       const [{ data: txs }, { data: cats }] = await Promise.all([
         supabase.from('transacciones').select('*, categorias(id,nombre,icono,color)')
@@ -105,14 +113,14 @@ K��Yt('T')[0]
   }, [categorias])
 
   const eliminar = useCallback(async (id: string) => {
-    if (!confirm('¿Eliminar esta transacción?')) return
+    if (!confirm('Â¿Eliminar esta transacciÃ³n?')) return
     await supabase.from('transacciones').delete().eq('id', id)
     setTransacciones(prev => prev.filter(t => t.id !== id))
   }, [])
 
   const eliminarSeleccionados = async () => {
     if (selectedIds.size === 0) return
-    if (!confirm(`¿Eliminar ${selectedIds.size} transacción(es) seleccionada(s)?`)) return
+    if (!confirm(`Â¿Eliminar ${selectedIds.size} transacciÃ³n(es) seleccionada(s)?`)) return
     const ids = Array.from(selectedIds)
     await supabase.from('transacciones').delete().in('id', ids)
     setTransacciones(prev => prev.filter(t => !selectedIds.has(t.id)))
@@ -185,7 +193,7 @@ K��Yt('T')[0]
     <div className="min-h-screen bg-crema">
       <Navbar />
       <main className="md:ml-56 p-4 md:p-8 pb-24 md:pb-8">
-        <h1 className="text-2xl font-black text-marron mb-6">Mis movimientos 📋</h1>
+        <h1 className="text-2xl font-black text-marron mb-6">Mis movimientos ð</h1>
 
         {/* Filtros */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-crema mb-4 flex flex-wrap gap-3 items-center">
@@ -201,14 +209,14 @@ K��Yt('T')[0]
           <div className="flex items-center gap-2 ml-auto">
             <select value={filtroCat} onChange={e => setFiltroCat(e.target.value)}
               className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-terracota">
-              <option value="">Todas las categorías</option>
+              <option value="">Todas las categorÃ­as</option>
               {categorias.map(c => <option key={c.id} value={c.nombre}>{c.icono} {c.nombre}</option>)}
             </select>
             {selectedIds.size > 0 && (
               <button onClick={eliminarSeleccionados}
                 title={`Eliminar ${selectedIds.size} seleccionados`}
                 className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-xl text-sm font-bold transition-all shadow-sm active:scale-95">
-                🗑️ <span>{selectedIds.size}</span>
+                ðï¸ <span>{selectedIds.size}</span>
               </button>
             )}
           </div>
@@ -228,8 +236,8 @@ K��Yt('T')[0]
         {/* Leyenda sobre-promedio */}
         {filtradas.some(esSobrePromedio) && (
           <div className="flex items-center gap-2 mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-            <span className="font-bold">↑</span>
-            <span>Los movimientos con borde naranja están por encima del promedio de su categoría en este mes</span>
+            <span className="font-bold">â</span>
+            <span>Los movimientos con borde naranja estÃ¡n por encima del promedio de su categorÃ­a en este mes</span>
           </div>
         )}
 
@@ -239,7 +247,7 @@ K��Yt('T')[0]
             <div className="p-8 text-center text-gray-400">Cargando...</div>
           ) : filtradas.length === 0 ? (
             <div className="p-8 text-center">
-              <p className="text-gray-400 mb-2">Sin movimientos en este período</p>
+              <p className="text-gray-400 mb-2">Sin movimientos en este perÃ­odo</p>
               <a href="/importar" className="text-terracota font-bold text-sm hover:underline">+ Importar extracto</a>
             </div>
           ) : (
@@ -250,11 +258,11 @@ K��Yt('T')[0]
                   type="checkbox"
                   checked={filtradas.length > 0 && selectedIds.size === filtradas.length}
                   onChange={toggleSelectAll}
-            className="w-4 h-4 rounded accent-terracota cursor-pointer"
+                  className="w-4 h-4 rounded accent-terracota cursor-pointer"
                 />
                 <span className="text-xs text-gray-400 font-medium select-none">
                   {selectedIds.size > 0
-                    ? `${selectedIds.size} seleccionado${selectedIds.size > 1 ? 's' : ''} — Shift+clic para rango`
+                    ? `${selectedIds.size} seleccionado${selectedIds.size > 1 ? 's' : ''} â Shift+clic para rango`
                     : 'Seleccionar todos'
                   }
                 </span>
@@ -265,10 +273,10 @@ K��Yt('T')[0]
                   key={t.id}
                   t={t}
                   idx={idx}
-            seleccionado={selectedIds.has(t.id)}
+                  seleccionado={selectedIds.has(t.id)}
                   sobrePromedio={esSobrePromedio(t)}
                   editandoId={editandoId}
-            categorias={categorias}
+                  categorias={categorias}
                   onToggle={toggleSelect}
                   onEliminar={eliminar}
                   onCambiarCat={cambiarCategoria}
