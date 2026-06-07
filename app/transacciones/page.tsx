@@ -52,14 +52,14 @@ export default function TransaccionesPage() {
   }
 
   const eliminar = async (id: string) => {
-    if (!confirm('Â¿Eliminar esta transacciÃ³n?')) return
+    if (!confirm('¿Eliminar esta transacción?')) return
     await supabase.from('transacciones').delete().eq('id', id)
     setTransacciones(prev => prev.filter(t => t.id !== id))
   }
 
   const eliminarSeleccionados = async () => {
     if (selectedIds.size === 0) return
-    if (!confirm(`Â¿Eliminar ${selectedIds.size} transacciÃ³n(es) seleccionada(s)?`)) return
+    if (!confirm(`¿Eliminar ${selectedIds.size} transacción(es) seleccionada(s)?`)) return
     const ids = Array.from(selectedIds)
     await supabase.from('transacciones').delete().in('id', ids)
     setTransacciones(prev => prev.filter(t => !selectedIds.has(t.id)))
@@ -102,7 +102,7 @@ export default function TransaccionesPage() {
 
   const total = filtradas.reduce((s, t) => s + Number(t.monto), 0)
 
-  // Calcular promedio por categorÃ­a para resaltar los que estÃ¡n sobre el promedio
+  // Calcular promedio por categoría para resaltar los que están sobre el promedio
   const sumaPorCat: Record<string, number> = {}
   const conteoPorCat: Record<string, number> = {}
   for (const t of filtradas) {
@@ -124,7 +124,7 @@ export default function TransaccionesPage() {
     <div className="min-h-screen bg-crema">
       <Navbar />
       <main className="md:ml-56 p-4 md:p-8 pb-24 md:pb-8">
-        <h1 className="text-2xl font-black text-marron mb-6">Mis movimientos ð</h1>
+        <h1 className="text-2xl font-black text-marron mb-6">Mis movimientos 📋</h1>
 
         {/* Filtros */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-crema mb-4 flex flex-wrap gap-3 items-center">
@@ -140,14 +140,14 @@ export default function TransaccionesPage() {
           <div className="flex items-center gap-2 ml-auto">
             <select value={filtroCat} onChange={e => setFiltroCat(e.target.value)}
               className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-terracota">
-              <option value="">Todas las categorÃ­as</option>
+              <option value="">Todas las categorías</option>
               {categorias.map(c => <option key={c.id} value={c.nombre}>{c.icono} {c.nombre}</option>)}
             </select>
             {selectedIds.size > 0 && (
               <button onClick={eliminarSeleccionados}
                 title={`Eliminar ${selectedIds.size} seleccionados`}
                 className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-xl text-sm font-bold transition-all shadow-sm active:scale-95">
-                ðï¸ <span>{selectedIds.size}</span>
+                🗑️ <span>{selectedIds.size}</span>
               </button>
             )}
           </div>
@@ -167,8 +167,8 @@ export default function TransaccionesPage() {
         {/* Leyenda sobre-promedio */}
         {filtradas.some(esSobrePromedio) && (
           <div className="flex items-center gap-2 mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-            <span className="font-bold">â</span>
-            <span>Los movimientos con borde naranja estÃ¡n por encima del promedio de su categorÃ­a en este mes</span>
+            <span className="font-bold">↑</span>
+            <span>Los movimientos con borde naranja están por encima del promedio de su categoría en este mes</span>
           </div>
         )}
 
@@ -178,7 +178,7 @@ export default function TransaccionesPage() {
             <div className="p-8 text-center text-gray-400">Cargando...</div>
           ) : filtradas.length === 0 ? (
             <div className="p-8 text-center">
-              <p className="text-gray-400 mb-2">Sin movimientos en este perÃ­odo</p>
+              <p className="text-gray-400 mb-2">Sin movimientos en este período</p>
               <a href="/importar" className="text-terracota font-bold text-sm hover:underline">+ Importar extracto</a>
             </div>
           ) : (
@@ -193,7 +193,7 @@ export default function TransaccionesPage() {
                 />
                 <span className="text-xs text-gray-400 font-medium select-none">
                   {selectedIds.size > 0
-                    ? `${selectedIds.size} seleccionado${selectedIds.size > 1 ? 's' : ''} â Shift+clic para rango`
+                    ? `${selectedIds.size} seleccionado${selectedIds.size > 1 ? 's' : ''} — Shift+clic para rango`
                     : 'Seleccionar todos'
                   }
                 </span>
@@ -225,8 +225,8 @@ export default function TransaccionesPage() {
                       className="w-4 h-4 rounded accent-terracota flex-shrink-0 cursor-pointer"
                     />
 
-                    {/* Icono categorÃ­a */}
-                    <span className="text-2xl flex-shrink-0">{t.categorias?.icono || 'ð¦'}</span>
+                    {/* Icono categoría */}
+                    <span className="text-2xl flex-shrink-0">{t.categorias?.icono || '📦'}</span>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
@@ -234,7 +234,7 @@ export default function TransaccionesPage() {
                         <p className="font-semibold text-gray-800 text-sm truncate">{t.descripcion}</p>
                         {sobrePromedio && (
                           <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">
-                            â sobre prom.
+                            ↑ sobre prom.
                           </span>
                         )}
                       </div>
@@ -251,7 +251,7 @@ export default function TransaccionesPage() {
                         <button
                           onClick={e => { e.stopPropagation(); setEditandoId(t.id) }}
                           className="text-xs text-gray-400 hover:text-terracota mt-0.5 transition-colors">
-                          {t.categorias?.nombre || 'Sin categorÃ­a'} â¢ {t.fecha} âï¸
+                          {t.categorias?.nombre || 'Sin categoría'} • {t.fecha} ✏️
                         </button>
                       )}
                     </div>
@@ -262,7 +262,7 @@ export default function TransaccionesPage() {
                       <button
                         onClick={e => { e.stopPropagation(); eliminar(t.id) }}
                         className="text-gray-300 hover:text-red-400 text-lg leading-none transition-colors">
-                        Ã
+                        ×
                       </button>
                     </div>
                   </div>
