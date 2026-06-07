@@ -1,32 +1,85 @@
 'use client'
-import { useEffect, useMemo, useCallback, useState } from 'react'
+import { useEffect, useMemo, useCallback, useState, useRef, memo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Transaccion, Categoria } from '@/lib/types'
 import Navbar from '@/components/Navbar'
 
-export default function TransaccionesPage() {
-  const router = useRouter()
-  const [transacciones, setTransacciones] = useState<Transaccion[]>([])
-  const [categorias, setCategorias] = useState<Categoria[]>([])
-  const [loading, setLoading] = useState(true)
-  const [filtroMes, setFiltroMes] = useState(new Date().getMonth() + 1)
-  const [filtroAno] = useState(new Date().getFullYear())
-  const [filtroCat, setFiltroCat] = useState('')
-  const [editandoId, setEditandoId] = useState<string | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [lastClickedIdx, setLastClickedIdx] = useState<number | null>(null)
+const TransaccionRow = memo(function TransaccionRow({ t, idx, seleccionado, sobrePromedio, editandoId, categorias, onToggle, onEliminar, onCambiarCat, onSetEditandoId }: {
+  t: Transaccion; idx: number; seleccionado: boolean; sobrePromedio: boolean
+  editandoId: string | null; categorias: Categoria[]
+  onToggle: (id: string, idx: number, shiftKey: boolean) => void
+  onEliminar: (id: string) => void
+  onCambiarCat: (id: string, catId: string) => void
+  onSetEditandoId: (id: string | null) => void
+}) {
+  return (
+    <div
+      onClick={(e) => onToggle(t.id, idx, e.shiftKey)}
+      className={`flex items-center gap-3 p-4 border-b border-crema last:border-0 cursor-pointer transition-colors select-none
+        ${seleccionado ? 'bg-red-50' : sobrePromedio ? 'bg-amber-50 hover:bg-amber-100/60' : 'hover:bg-crema/40'}
+        ${sobrePromedio ? 'border-l-4 border-l-amber-400' : 'border-l-4 border-l-transparent'}
+      `}
+    >
+      <input
+        type="checkbox"
+        checked={seleccionado}
+        onChange={() => {}}
+        className="w-4 h-4 rounded accent-terracota flex-shrink-0 cursor-pointer"
+      />
+      <span className="text-2xl flex-shrink-0">{t.categorias?.icono || '📦'}</span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="font-semibold text-gray-800 text-sm truncate">{t.descripcion}</p>
+          {sobrePromedio && (
+            <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">
+              ↑ sobre prom.
+            </span>
+          )}
+        </div>
+        {editandoId === t.id ? (
+          <select
+            autoFocus
+            onChange={e => { e.stopPropagation(); onCambiarCat(t.id, e.target.value) }}
+            onBlur={() => onSetEditandoId(null)}
+            onClick={e => e.stopPropagation()}
+            className="border border-terracota rounded-lg px-2 py-0.5 text-xs mt-1 focus:outline-none">
+            {categorias.map(c => <option key={c.id} value={c.id}>{c.icono} {c.nombre}</option>)}
+          </select>
+   1�
+H�
+��]ۂ�ې�X��^�HO��K�����Y�][ۊ
+N�۔�]Y][��Y
+�Y
+H_B��\�Ә[YOH�^^�^Yܘ^KMݙ\��^]\��X��H]L�H�[��][ۋX��ܜȏ�����]Y�ܚX\�˛��X��H	��[��]Y�ܰ�XI�H8�(����X�_H8�#��#؝]ۏ��
+_B��]���]��\�Ә[YOH��^][\�X�[�\��\L��^\��[��L����[��\�Ә[YOH��۝X�X��^]\��X��H^\�H����ӝ[X�\��[۝�K�њ^Y
+�_O��[����]ۂ�ې�X��^�HO��K�����Y�][ۊ
+N�ۑ[[Z[�\��Y
+H_B��\�Ә[YOH�^Yܘ^KL�ݙ\��^\�YM^[�XY[��[�ۙH�[��][ۋX��ܜȏ��0�؝]ۏ���]����]���
+B�JB��^ܝY�][�[��[ۈ�[��X��[ۙ\�Y�J
+H�ۜ���]\�H\�T��]\�
+B��ۜ���[��X��[ۙ\��]�[��X��[ۙ\�HH\�T�]O�[��X��[ۖ�O��JB��ۜ���]Y�ܚX\��]�]Y�ܚX\�HH\�T�]O�]Y�ܚXV�O��JB��ۜ���Y[���]�Y[��HH\�T�]J�YJB��ۜ�ٚ[��Y\��]�[��Y\�HH\�T�]J�]�]J
+K��][۝
 
-  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+H
+�JB��ۜ�ٚ[��[��HH\�T�]J�]�]J
+K��]�[YX\�
+JB��ۜ�ٚ[���]�]�[���]HH\�T�]J	��B��ۜ��Y][��Y�]Y][��YHH\�T�]O��[���[��[
+B��ۜ���[X�YY��]�[X�YY�HH\�T�]O�]��[�Ϗ��]��]
 
-  useEffect(() => {
-    const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/'); return }
-      const uid = session.user.id
+JB��ۜ�\��X��YY�Y�H\�T�Y��[X�\��[��[
+B���ۜ�Y\�\�H��[�I�	љX��	�X\��	�X���	�X^I�	ҝ[��	ҝ[	�	�Y���	��\	�	���	�	ӛ݉�	�X��B��\�QY��X�
 
-      const inicioMes = `${filtroAno}-${String(filtroMes).padStart(2,'0')}-01`
-      const finMes = new Date(filtroAno, filtroMes, 0).toISOString().split('T')[0]
+
+HO��ۜ��YH\�[��
+
+HO��ۜ��]N���\��[ۈHHH]�Z]�\X�\�K�]]��]�\��[ۊ
+B�Y�
+\�\��[ۊH���]\��\�
+	���N��]\��B��ۜ�ZYH�\��[ۋ�\�\��Y���ۜ�[�X�[�Y\�H	ٚ[��[��KI���[���[��Y\�K�Y�\�
+�	�	�_KLX��ۜ��[�Y\�H�]�]J�[��[���[��Y\�
+K��T����[��
+K��Yt('T')[0]
 
       const [{ data: txs }, { data: cats }] = await Promise.all([
         supabase.from('transacciones').select('*, categorias(id,nombre,icono,color)')
@@ -41,7 +94,7 @@ export default function TransaccionesPage() {
     setSelectedIds(new Set())
   }, [router, filtroMes, filtroAno])
 
-  const cambiarCategoria = async (id: string, catId: string) => {
+  const cambiarCategoria = useCallback(async (id: string, catId: string) => {
     await supabase.from('transacciones').update({ categoria_id: catId }).eq('id', id)
     setTransacciones(prev => prev.map(t => {
       if (t.id !== id) return t
@@ -49,13 +102,13 @@ export default function TransaccionesPage() {
       return { ...t, categoria_id: catId, categorias: cat }
     }))
     setEditandoId(null)
-  }
+  }, [categorias])
 
-  const eliminar = async (id: string) => {
+  const eliminar = useCallback(async (id: string) => {
     if (!confirm('¿Eliminar esta transacción?')) return
     await supabase.from('transacciones').delete().eq('id', id)
     setTransacciones(prev => prev.filter(t => t.id !== id))
-  }
+  }, [])
 
   const eliminarSeleccionados = async () => {
     if (selectedIds.size === 0) return
@@ -98,12 +151,12 @@ export default function TransaccionesPage() {
     return conteoPorCat[k] > 1 && Number(t.monto) > promPorCat[k]
   }, [conteoPorCat, promPorCat])
 
-  const toggleSelect = (id: string, idx: number, shiftKey: boolean) => {
+  const toggleSelect = useCallback((id: string, idx: number, shiftKey: boolean) => {
     setSelectedIds(prev => {
       const next = new Set(prev)
-      if (shiftKey && lastClickedIdx !== null) {
-        const start = Math.min(lastClickedIdx, idx)
-        const end = Math.max(lastClickedIdx, idx)
+      if (shiftKey && lastClickedIdxRef.current !== null) {
+        const start = Math.min(lastClickedIdxRef.current, idx)
+        const end = Math.max(lastClickedIdxRef.current, idx)
         const shouldSelect = !prev.has(filtradas[idx].id)
         for (let i = start; i <= end; i++) {
           if (i < filtradas.length) {
@@ -117,16 +170,16 @@ export default function TransaccionesPage() {
       }
       return next
     })
-    setLastClickedIdx(idx)
-  }
+    lastClickedIdxRef.current = idx
+  }, [filtradas])
 
-  const toggleSelectAll = () => {
+  const toggleSelectAll = useCallback(() => {
     if (selectedIds.size === filtradas.length) {
       setSelectedIds(new Set())
     } else {
       setSelectedIds(new Set(filtradas.map(t => t.id)))
     }
-  }
+  }, [selectedIds.size, filtradas])
 
   return (
     <div className="min-h-screen bg-crema">
@@ -197,7 +250,7 @@ export default function TransaccionesPage() {
                   type="checkbox"
                   checked={filtradas.length > 0 && selectedIds.size === filtradas.length}
                   onChange={toggleSelectAll}
-                  className="w-4 h-4 rounded accent-terracota cursor-pointer"
+            0     className="w-4 h-4 rounded accent-terracota cursor-pointer"
                 />
                 <span className="text-xs text-gray-400 font-medium select-none">
                   {selectedIds.size > 0
@@ -207,75 +260,21 @@ export default function TransaccionesPage() {
                 </span>
               </div>
 
-              {filtradas.map((t, idx) => {
-                const sobrePromedio = esSobrePromedio(t)
-                const seleccionado = selectedIds.has(t.id)
-                return (
-                  <div
-                    key={t.id}
-                    onClick={(e) => toggleSelect(t.id, idx, e.shiftKey)}
-                    className={`flex items-center gap-3 p-4 border-b border-crema last:border-0 cursor-pointer transition-colors select-none
-                      ${seleccionado
-                        ? 'bg-red-50'
-                        : sobrePromedio
-                          ? 'bg-amber-50 hover:bg-amber-100/60'
-                          : 'hover:bg-crema/40'
-                      }
-                      ${sobrePromedio ? 'border-l-4 border-l-amber-400' : 'border-l-4 border-l-transparent'}
-                    `}
-                  >
-                    {/* Checkbox */}
-                    <input
-                      type="checkbox"
-                      checked={seleccionado}
-                      onChange={() => {}}
-                      onClick={e => e.stopPropagation()}
-                      className="w-4 h-4 rounded accent-terracota flex-shrink-0 cursor-pointer"
-                    />
-
-                    {/* Icono categoría */}
-                    <span className="text-2xl flex-shrink-0">{t.categorias?.icono || '📦'}</span>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-gray-800 text-sm truncate">{t.descripcion}</p>
-                        {sobrePromedio && (
-                          <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">
-                            ↑ sobre prom.
-                          </span>
-                        )}
-                      </div>
-                      {editandoId === t.id ? (
-                        <select
-                          autoFocus
-                          onChange={e => { e.stopPropagation(); cambiarCategoria(t.id, e.target.value) }}
-                          onBlur={() => setEditandoId(null)}
-                          onClick={e => e.stopPropagation()}
-                          className="border border-terracota rounded-lg px-2 py-0.5 text-xs mt-1 focus:outline-none">
-                          {categorias.map(c => <option key={c.id} value={c.id}>{c.icono} {c.nombre}</option>)}
-                        </select>
-                      ) : (
-                        <button
-                          onClick={e => { e.stopPropagation(); setEditandoId(t.id) }}
-                          className="text-xs text-gray-400 hover:text-terracota mt-0.5 transition-colors">
-                          {t.categorias?.nombre || 'Sin categoría'} • {t.fecha} ✏️
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Monto + eliminar individual */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="font-black text-terracota text-sm">S/ {Number(t.monto).toFixed(2)}</span>
-                      <button
-                        onClick={e => { e.stopPropagation(); eliminar(t.id) }}
-                        className="text-gray-300 hover:text-red-400 text-lg leading-none transition-colors">
-                        ×
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
+              {filtradas.map((t, idx) => (
+                <TransaccionRow
+                  key={t.id}
+                  t={t}
+                  idx={idx}
+             0    seleccionado={selectedIds.has(t.id)}
+                  sobrePromedio={esSobrePromedio(t)}
+                  editandoId={editandoId}
+             0    categorias={categorias}
+                  onToggle={toggleSelect}
+                  onEliminar={eliminar}
+                  onCambiarCat={cambiarCategoria}
+                  onSetEditandoId={setEditandoId}
+                />
+              ))}
             </>
           )}
         </div>
