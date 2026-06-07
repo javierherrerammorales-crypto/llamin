@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { Transaccion, Categoria } from '@/lib/types'
+import { Transaccion } from '@/lib/types'
 import Navbar from '@/components/Navbar'
 
 const PALETA = [
@@ -121,7 +121,7 @@ export default function EstadisticasPage() {
       setLoading(false)
     }
     load()
-  }, [router, filtroMes, filtro@no])
+  }, [router, filtroMes, filtroAno])
 
   type CatStat = { nombre: string; icono: string; total: number; count: number; color: string }
   const catMap: Record<string, CatStat> = {}
@@ -254,7 +254,7 @@ export default function EstadisticasPage() {
                 {topMerchants.map((m, i) => (
                   <div key={i} className="flex items-start gap-3">
                     <span className={`text-sm font-black w-6 text-right flex-shrink-0 mt-0.5 ${i === 0 ? 'text-terracota' : i < 3 ? 'text-gray-500' : 'text-gray-300'}`}>
-                      #{i + 1}
+                      {i + 1}
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-baseline mb-1.5">
