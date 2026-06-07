@@ -885,7 +885,7 @@ export default function ImportarPage() {
                         <div className="flex-1 border-l border-white/20 pl-6">
                           <p className="text-xs font-black text-white uppercase mb-2">Dólares</p>
                           <p className="text-[10px] text-amber-300">Pago total del mes</p>
-                          <p className="font-black text-xl text-white">$\{estadoTC.resumen.totalDolares.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                          <p className="font-black text-xl text-white">${estadoTC.resumen.totalDolares.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                         </div>
                       )}
                     </div>
