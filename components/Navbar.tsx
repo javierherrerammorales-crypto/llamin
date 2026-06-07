@@ -9,6 +9,7 @@ const links = [
   { href: '/transacciones', label: '📋 Movimientos' },
   { href: '/presupuestos', label: '🎯 Presupuestos' },
   { href: '/metas', label: '⭐ Metas' },
+  { href: '/estadisticas', label: '📊 Estadísticas' },
 ]
 
 export default function Navbar() {
@@ -25,10 +26,7 @@ export default function Navbar() {
       {/* Desktop sidebar */}
       <nav className="hidden md:flex flex-col fixed left-0 top-0 h-full w-56 bg-white border-r border-crema shadow-sm z-40 py-6 px-4">
         <div className="mb-8 text-center">
-          <div className="flex items-center gap-2">
-              <img src="/llamin-logo.png" alt="Llamín" width={40} height={40} style={{objectFit:'contain'}} onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display='none'}} />
-              <span className="text-2xl font-black text-terracota">Llamín</span>
-            </div>
+          <span className="text-2xl font-black text-terracota">🦙 Llamín</span>
           <p className="text-xs text-gray-400 mt-1">Tu llama financiera peruana</p>
         </div>
         <div className="flex flex-col gap-1 flex-1">
@@ -50,14 +48,14 @@ export default function Navbar() {
       </nav>
 
       {/* Mobile bottom bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-crema z-40 flex justify-around py-2 px-2">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-crema z-40 flex justify-around py-2 px-1">
         {links.map(l => (
           <Link key={l.href} href={l.href}
-            className={`flex flex-col items-center p-2 rounded-xl text-xs font-medium transition-all ${
+            className={`flex flex-col items-center p-1.5 rounded-xl text-xs font-medium transition-all ${
               pathname === l.href ? 'text-terracota' : 'text-gray-400'
             }`}>
             <span className="text-xl">{l.label.split(' ')[0]}</span>
-            <span className="text-[10px] mt-0.5">{l.label.split(' ')[1]}</span>
+            <span className="text-[9px] mt-0.5">{l.label.split(' ')[1]}</span>
           </Link>
         ))}
       </nav>
