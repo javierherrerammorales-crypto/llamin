@@ -841,61 +841,55 @@ export default function ImportarPage() {
                 </div>
               </div>
 
-              {/* Grid de métricas principales */}
-                            {/* Línea de crédito - 3 cajitas */}
-              {(estadoTC.resumen.lineaCredito > 0 || estadoTC.resumen.saldoDisponible > 0 || estadoTC.resumen.lineaUtilizada > 0) && (
+              {/* Línea de crédito - 3 cajitas */}
+              {(estadoTC.resumen.lineaCredito > 0 || estadoTC.resumen.saldoDisponible > 0 || estadoTC.resumen.lineaUtilizada > 0) ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                  <div className="bg-white/10 rounded-2xl p-4">
-                    <p className="text-xs text-amber-300 mb-1">Tu <b>línea de crédito</b> actual es:</p>
-                    <p className="font-black text-2xl text-white">S/ {estadoTC.resumen.lineaCredito.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                  </div>
-                  {estadoTC.resumen.saldoDisponible > 0 && (
+                  {estadoTC.resumen.lineaCredito > 0 ? (
                     <div className="bg-white/10 rounded-2xl p-4">
-                      <p className="text-xs text-amber-300 mb-1">Tu <b>saldo disponible</b> al {estadoTC.resumen.cicloHasta} es:</p>
+                      <p className="text-xs text-amber-300 mb-1">Tu línea de crédito actual es:</p>
+                      <p className="font-black text-2xl text-white">S/ {estadoTC.resumen.lineaCredito.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                    </div>
+                  ) : null}
+                  {estadoTC.resumen.saldoDisponible > 0 ? (
+                    <div className="bg-white/10 rounded-2xl p-4">
+                      <p className="text-xs text-amber-300 mb-1">Tu saldo disponible al {estadoTC.resumen.cicloHasta} es:</p>
                       <p className="font-black text-2xl text-green-400">S/ {estadoTC.resumen.saldoDisponible.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                     </div>
-                  )}
-                  {estadoTC.resumen.lineaUtilizada > 0 && (
+                  ) : null}
+                  {estadoTC.resumen.lineaUtilizada > 0 ? (
                     <div className="bg-white/10 rounded-2xl p-4">
-                      <p className="text-xs text-amber-300 mb-1">Tu <b>línea de crédito utilizada</b> al {estadoTC.resumen.cicloHasta} es:</p>
+                      <p className="text-xs text-amber-300 mb-1">Tu línea utilizada al {estadoTC.resumen.cicloHasta} es:</p>
                       <p className="font-black text-2xl text-red-300">S/ {estadoTC.resumen.lineaUtilizada.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                     </div>
-                  )}
+                  ) : null}
                 </div>
-              )}
+              ) : null}
 
               {/* Último día de pago + totales */}
-              {estadoTC.resumen.ultimoDiaPago && (estadoTC.resumen.totalSoles > 0 || estadoTC.resumen.pagoMinimo > 0) && (
-                <div className="flex flex-wrap gap-3 mb-4 items-stretch">
-                  <div className="bg-white/10 rounded-2xl p-4 flex flex-col items-center justify-center min-w-[140px]">
-                    <p className="text-[10px] font-bold text-amber-300 uppercase tracking-wide mb-2">Último día de pago</p>
-                    <p className="font-black text-base text-white text-center">{estadoTC.resumen.ultimoDiaPago}</p>
+              {estadoTC.resumen.ultimoDiaPago ? (
+                <div className="flex flex-wrap gap-3 mb-4">
+                  <div className="bg-white/10 rounded-2xl p-4 flex flex-col items-center justify-center">
+                    <p className="text-xs font-bold text-amber-300 uppercase mb-2">Último día de pago</p>
+                    <p className="font-black text-base text-white">{estadoTC.resumen.ultimoDiaPago}</p>
                   </div>
-                  <div className="text-2xl text-white/40 self-center hidden md:flex">→</div>
                   <div className="flex-1 bg-white/10 rounded-2xl p-4">
-                    <div className="flex gap-6">
+                    <div className="flex gap-4 flex-wrap">
                       <div className="flex-1">
-                        <p className="text-xs font-black text-white uppercase mb-2">Soles</p>
-                        <p className="text-[10px] text-amber-300">Pago total del mes</p>
-                        <p className="font-black text-xl text-white">S/{estadoTC.resumen.totalSoles.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                        <p className="text-[10px] text-amber-300 mt-2">Pago mínimo</p>
-                        <p className="font-bold text-base text-white">S/{estadoTC.resumen.pagoMinimo.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                        <p className="text-xs font-bold text-white uppercase mb-1">Pago total soles</p>
+                        <p className="font-black text-xl text-white">S/ {estadoTC.resumen.totalSoles.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                        <p className="text-xs font-bold text-white uppercase mt-2 mb-1">Pago mínimo</p>
+                        <p className="font-bold text-base text-white">S/ {estadoTC.resumen.pagoMinimo.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                       </div>
-                      {estadoTC.resumen.totalDolares > 0 && (
-                        <div className="flex-1 border-l border-white/20 pl-6">
-                          <p className="text-xs font-black text-white uppercase mb-2">Dólares</p>
-                          <p className="text-[10px] text-amber-300">Pago total del mes</p>
-                          <p className="font-black text-xl text-white">${estadoTC.resumen.totalDolares.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                      {estadoTC.resumen.totalDolares > 0 ? (
+                        <div className="flex-1 border-l border-white/20 pl-4">
+                          <p className="text-xs font-bold text-white uppercase mb-1">Pago total dólares</p>
+                          <p className="font-black text-xl text-white">USD {estadoTC.resumen.totalDolares.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                         </div>
-                      )}
+                      ) : null}
                     </div>
-                    {estadoTC.resumen.totalDolares > 0 && (
-                      <p className="text-[10px] text-amber-200 mt-3">ℹ️ Debes realizar un pago en soles y otro en dólares. Ambos son independientes entre sí.</p>
-                    )}
                   </div>
                 </div>
-              )}
-
+              ) : null}
 
               {/* Tasas de interés */}
               <div className="grid grid-cols-2 gap-2 mb-3">
