@@ -250,7 +250,7 @@ K��Yt('T')[0]
                   type="checkbox"
                   checked={filtradas.length > 0 && selectedIds.size === filtradas.length}
                   onChange={toggleSelectAll}
-            0     className="w-4 h-4 rounded accent-terracota cursor-pointer"
+            className="w-4 h-4 rounded accent-terracota cursor-pointer"
                 />
                 <span className="text-xs text-gray-400 font-medium select-none">
                   {selectedIds.size > 0
@@ -265,10 +265,10 @@ K��Yt('T')[0]
                   key={t.id}
                   t={t}
                   idx={idx}
-             0    seleccionado={selectedIds.has(t.id)}
+            seleccionado={selectedIds.has(t.id)}
                   sobrePromedio={esSobrePromedio(t)}
                   editandoId={editandoId}
-             0    categorias={categorias}
+            categorias={categorias}
                   onToggle={toggleSelect}
                   onEliminar={eliminar}
                   onCambiarCat={cambiarCategoria}
