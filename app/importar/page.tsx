@@ -289,7 +289,7 @@ const parsearEstadoCuentaTC = (text: string, cats: Categoria[], banco: string): 
   const parsePlanCuotas = (txt: string): CuotaFutura[] => {
     if (!txt) return []
     // Busca filas con periodo (MES-AÑO), descripción, número cuota, montos
-    const PEP��DO_RX = /\b(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)-?\d{2,4}\b/gi
+    const PERIODO_RX = /\b(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)-?\d{2,4}\b/gi
     const positions: { idx: number; token: string }[] = []
     let dm: RegExpExecArray | null
     while ((dm = PERIODO_RX.exec(txt)) !== null)
@@ -640,7 +640,7 @@ export default function ImportarPage() {
                     <select
                       value={m.categoria}
                       onChange={e => actualizarCatTC(seccion, i, e.target.value)}
-                      className={`border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-terracota w-full max-w[140px] ${
+                      className={`border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-terracota w-full max-w-[140px] ${
                         m.sinCategoria
                           ? 'border-amber-400 bg-amber-50 text-amber-900 font-bold'
                           : 'border-gray-200 bg-white text-gray-700'
@@ -692,7 +692,7 @@ export default function ImportarPage() {
                   <td className="py-2 px-3 text-right font-bold text-xs text-blue-600 whitespace-nowrap">
                     {c.dolares > 0 ? `$ ${c.dolares.toFixed(2)}` : <span className="text-gray-300">—</span>}
                   </td>
-                 </tr>
+                </tr>
               ))}
             </tbody>
           </table>
@@ -844,148 +844,6 @@ export default function ImportarPage() {
         {/* ── PASO PREVIEW TARJETA DE CRÉDITO ── */}
         {paso === 'preview_tc' && estadoTC && (
           <>
-            {/* ── TARJETA RESUMEN FINANCIERO ── */}
-            <div className="bg-gradient-to-br from-marron to-amber-900 text-white rounded-2xl p-5 mb-5 shadow-xl">
-              {/* Encabezado */}
-              <div className="flex items-center gap-3 mb-4">
-                <LlaminMascot expresion="emocionada" size={50} />
-                <div>
-                  <p className="font-black text-lg">Estado de Cuenta — {BANCOS.find(b => b.id === banco)?.label}</p>
-                  {estadoTC.resumen.cicloDesde ? (
-                    <p className="text-amber-200 text-sm">
-                      Ciclo: {estadoTC.resumen.cicloDesde} al {estadoTC.resumen.cicloHasta}
-                    </p>
-                  ) : (
-                    <p className="text-amber-300 text-sm">Tarjeta de crédito importada</p>
-                  )}
-                </div>
-              </div>
-
-              {/* — BLOQUE 1: Línea de crédito — 3 cuadros horizontales */}
-              {(estadoTC.resumen.lineaCredito > 0 || estadoTC.resumen.saldoDisponible > 0) && (
-                <div className="grid grid-cols-3 gap-2 mb-3">
-                  <div className="bg-white/10 rounded-xl p-3">
-                    <p className="text-amber-300 text-xs mb-1">Tu línea de crédito actual es:</p>
-                    <p className="font-black text-base">
-                      {estadoTC.resumen.lineaCredito > 0
-                        ? `S/ ${estadoTC.resumen.lineaCredito.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`
-                        : '—'}
-                    </p>
-                  </div>
-                  <div className="bg-white/10 rounded-xl p-3">
-                    <p className="text-amber-300 text-xs mb-1">
-                      Tu saldo disponible{estadoTC.resumen.cicloHasta ? ` al ${estadoTC.resumen.cicloHasta}` : ''} es:
-                    </p>
-                    <p className="font-black text-base text-green-300">
-                      {estadoTC.resumen.saldoDisponible > 0
-                        ? `S/ ${estadoTC.resumen.saldoDisponible.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`
-                        : '—'}
-                    </p>
-                  </div>
-                  <div className="bg-white/10 rounded-xl p-3">
-                    <p className="text-amber-300 text-xs mb-1">
-                      Tu línea utilizada{estadoTC.resumen.cicloHasta ? ` al ${estadoTC.resumen.cicloHasta}` : ''} es:
-                    </p>
-                    <p className="font-black text-base text-red-300">
-                      {estadoTC.resumen.lineaUtilizada > 0
-                        ? `S/ ${estadoTC.resumen.lineaUtilizada.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`
-                        : '—'}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* — BLOQUE 2: Información de pago — 3 cuadros */}
-              {(estadoTC.resumen.ultimoDiaPago || estadoTC.resumen.totalSoles > 0 || estadoTC.resumen.totalDolares > 0) && (
-                <div className="grid grid-cols-3 gap-2 mb-3">
-                  <div className="bg-red-500/40 rounded-xl p-3 border border-red-400/50">
-                    <p className="text-amber-300 text-xs mb-1">Último día de pago</p>
-                    <p className="font-black text-base">{estadoTC.resumen.ultimoDiaPago || '—'}</p>
-                  </div>
-                  <div className="bg-white/10 rounded-xl p-3">
-                    <p className="text-amber-300 text-xs mb-2 font-bold">SOLES</p>
-                    <p className="text-amber-200 text-xs">Pago total</p>
-                    <p className="font-black text-base">
-                      {estadoTC.resumen.totalSoles > 0 ? `S/ ${estadoTC.resumen.totalSoles.toFixed(2)}` : '—'}
-                    </p>
-                    {estadoTC.resumen.pagoMinimo > 0 && (
-                      <>
-                        <p className="text-amber-200 text-xs mt-2">Pago mínimo</p>
-                        <p className="font-bold text-sm text-yellow-300">S/ {estadoTC.resumen.pagoMinimo.toFixed(2)}</p>
-                      </>
-                    )}
-                  </div>
-                  <div className="bg-white/10 rounded-xl p-3">
-                    <p className="text-amber-300 text-xs mb-2 font-bold">DÓLARES</p>
-                    <p className="text-amber-200 text-xs">Pago total</p>
-                    <p className="font-black text-base">
-                      {estadoTC.resumen.totalDolares > 0 ? `$ ${estadoTC.resumen.totalDolares.toFixed(2)}` : '—'}
-                    </p>
-                    {estadoTC.resumen.pagoMinimoDolares > 0 && (
-                      <>
-                        <p className="text-amber-200 text-xs mt-2">Pago mínimo</p>
-                        <p className="font-bold text-sm text-yellow-300">$ {estadoTC.resumen.pagoMinimoDolares.toFixed(2)}</p>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* — BLOQUE 3: Tasas de interés — tabla grande */}
-              <div className="bg-white/10 rounded-xl p-4 mb-3">
-                <div className="grid grid-cols-3 gap-2 text-xs mb-2">
-                  <div className="text-amber-300 font-bold uppercase">Tasas</div>
-                  <div className="text-amber-300 font-bold uppercase text-center">Soles</div>
-                  <div className="text-amber-300 font-bold uppercase text-center">Dólares</div>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-xs py-2 border-t border-white/20 items-center">
-                  <div>
-                    <p className="font-bold text-white">TEA de Interés compensatorio</p>
-                    <p className="text-amber-200 mt-0.5 leading-tight">Se genera si no pagas el total</p>
-                  </div>
-                  <div className="text-center font-black text-white text-sm">
-                    {estadoTC.resumen.teaSoles
-                      ? `${estadoTC.resumen.teaSoles.toFixed(2)}%`
-                      : (banco === 'io' || banco === 'bcp') ? `${TASAS_IO.teaSolesMin}%–${TASAS_IO.teaSolesMax}%` : '—'}
-                  </div>
-                  <div className="text-center font-black text-white text-sm">
-                    {estadoTC.resumen.teaDolares
-                      ? `${estadoTC.resumen.teaDolares.toFixed(2)}%`
-                      : (banco === 'io' || banco === 'bcp') ? `${TASAS_IO.teaDolaresMin}%–${TASAS_IO.teaDolaresMax}%` : '—'}
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-xs py-2 border-t border-white/20 items-center">
-                  <div>
-                    <p className="font-bold text-white">TEA de Interés moratorio</p>
-                    <p className="text-amber-200 mt-0.5 leading-tight">Se cobra si pagas después del límite</p>
-                  </div>
-                  <div className="text-center font-black text-white text-sm">
-                    {estadoTC.resumen.tnamMoratoria
-                      ? `${estadoTC.resumen.tnamMoratoria.toFixed(2)}%`
-                      : (banco === 'io' || banco === 'bcp') ? `${TASAS_IO.tnamMoratoriaSoles}%` : '—'}
-                  </div>
-                  <div className="text-center font-black text-white text-sm">
-                    {estadoTC.resumen.tnamMoratoriaDolares
-                      ? `${estadoTC.resumen.tnamMoratoriaDolares.toFixed(2)}%`
-                      : (banco === 'io' || banco === 'bcp') ? `${TASAS_IO.tnamMoratoriaDolares}%` : '—'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Advertencia pago mínimo */}
-              {estadoTC.resumen.pagoMinimo > 0 && estadoTC.resumen.totalSoles > 0 && (
-                <div className="bg-red-500/25 border border-red-400/40 rounded-xl p-3 text-sm">
-                  <p className="font-bold mb-1">Importante sobre el pago mínimo</p>
-                  <p className="text-amber-100 text-xs leading-relaxed">
-                    Si solo pagas el mínimo (S/ {estadoTC.resumen.pagoMinimo.toFixed(2)}), el saldo restante
-                    de S/ {(estadoTC.resumen.totalSoles - estadoTC.resumen.pagoMinimo).toFixed(2)} generará intereses
-                    al {(estadoTC.resumen.tnamMoratoria ?? TASAS_IO.tnamMoratoriaSoles).toFixed(2)}% TEA en el siguiente ciclo.
-                    <b className="ml-1">Llamín te recomienda pagar el total.</b>
-                  </p>
-                </div>
-              )}
-            </div>
-
             {/* Aviso de categorías pendientes */}
             {sinCategoriaCount > 0 && (
               <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 mb-4 flex items-start gap-3">
@@ -1072,4 +930,38 @@ export default function ImportarPage() {
                 className="flex-1 border-2 border-gray-300 text-gray-600 font-bold py-3 rounded-xl hover:border-terracota hover:text-terracota transition-all">← Volver</button>
               <button onClick={guardar}
                 className="flex-1 bg-terracota text-white font-black py-3 rounded-xl hover:opacity-90 transition-all shadow-lg">
-             
+                             ✅ Guardar {filas.length} movimientos
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── GUARDANDO ── */}
+        {paso === 'guardando' && (
+          <div className="text-center py-20">
+            <LlaminMascot expresion="analizando" size={100} className="mx-auto mb-4 animate-pulse" />
+            <p className="text-xl font-black text-marron">Guardando tus movimientos...</p>
+          </div>
+        )}
+
+        {/* ── LISTO ── */}
+        {paso === 'listo' && (
+          <div className="text-center py-12">
+            <LlaminMascot expresion="emocionada" size={120} className="mx-auto mb-4" />
+            <h2 className="text-2xl font-black text-marron mb-2">¡Todo listo! 🎉</h2>
+            <p className="text-gray-600 mb-6">Se guardaron {totalMovimientos} movimientos. ¡Llamín está feliz!</p>
+            <div className="flex gap-3 justify-center flex-wrap">
+              <button onClick={() => { setFilas([]); setEstadoTC(null); setPaso('tipo') }}
+                className="border-2 border-terracota text-terracota font-bold px-6 py-3 rounded-xl hover:bg-red-50 transition-all">
+                📂 Importar otro archivo
+              </button>
+              <a href="/dashboard" className="bg-terracota text-white font-black px-6 py-3 rounded-xl hover:opacity-90 shadow-lg transition-all">
+                🏠 Ver mi dashboard
+              </a>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
