@@ -272,8 +272,12 @@ const parsearEstadoCuentaTC = (text: string, cats: Categoria[], banco: string): 
       if (desc.length < 2) continue
 
       let soles = 0, dolares = 0
-      if (amounts.length >= 2) {
-        soles = amounts[0].val; dolares = amounts[1].val
+      if (amounts.length >= 2 && esMerchanInternacional(desc)) {
+        // Internacional con 2 cifras: primera en dólares, segunda ignorada
+        dolares = amounts[0].val
+      } else if (amounts.length >= 2) {
+        // Local con 2 cifras: primera es soles, segunda es subtotal que se coló del PDF
+        soles = amounts[0].val
       } else {
         if (esMerchanInternacional(desc)) dolares = amounts[0].val
         else soles = amounts[0].val
@@ -633,7 +637,7 @@ export default function ImportarPage() {
                   <td className="py-2 px-3 text-right font-bold text-xs text-terracota whitespace-nowrap">
                     {m.soles > 0 ? `S/ ${m.soles.toFixed(2)}` : <span className="text-gray-300">—</span>}
                   </td>
-                  <td className="py-2 px-3 text-right font-bold text-xs text-blue-600 whitespace-nowrap">
+                  <td className="py-2 px-3 text-right font-bold text-xs text-marron whitespace-nowrap">
                     {m.dolares > 0 ? `$ ${m.dolares.toFixed(2)}` : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="py-2 px-3">
@@ -689,7 +693,7 @@ export default function ImportarPage() {
                   <td className="py-2 px-3 text-right font-bold text-xs text-terracota whitespace-nowrap">
                     {c.soles > 0 ? `S/ ${c.soles.toFixed(2)}` : <span className="text-gray-300">—</span>}
                   </td>
-                  <td className="py-2 px-3 text-right font-bold text-xs text-blue-600 whitespace-nowrap">
+                  <td className="py-2 px-3 text-right font-bold text-xs text-marron whitespace-nowrap">
                     {c.dolares > 0 ? `$ ${c.dolares.toFixed(2)}` : <span className="text-gray-300">—</span>}
                   </td>
                 </tr>
@@ -955,13 +959,4 @@ export default function ImportarPage() {
                 className="border-2 border-terracota text-terracota font-bold px-6 py-3 rounded-xl hover:bg-red-50 transition-all">
                 📂 Importar otro archivo
               </button>
-              <a href="/dashboard" className="bg-terracota text-white font-black px-6 py-3 rounded-xl hover:opacity-90 shadow-lg transition-all">
-                🏠 Ver mi dashboard
-              </a>
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
-  )
-}
+              <a href="/dashboard" clas
