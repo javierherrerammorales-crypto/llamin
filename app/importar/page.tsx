@@ -90,10 +90,11 @@ interface ResumenTC {
   cicloDesde: string; cicloHasta: string
   lineaCredito: number; saldoDisponible: number; lineaUtilizada: number
   ultimoDiaPago: string
-  totalSoles: number; totalDolares: number; pagoMinimo: number
-  // Tasas extraídas del PDF (o de la hoja resumen IO si no están en el PDF)
+  totalSoles: number; totalDolares: number; pagoMinimo: number; pagoMinimoDolares: number
+  // Tasas extraídas del PDF
   teaSoles: number | null; teaDolares: number | null
-  tnamMoratoria: number | null; tceaSoles: number | null
+  tnamMoratoria: number | null; tnamMoratoriaDolares: number | null
+  tceaSoles: number | null
 }
 
 interface EstadoCuentaTC {
@@ -182,21 +183,40 @@ const parsearEstadoCuentaTC = (text: string, cats: Categoria[], banco: string): 
   const resumen: ResumenTC = {
     cicloDesde:      extractStr(/ciclo de facturaci[oó]n[:\s]+(\d{2}\/\d{2}\/\d{4})/i),
     cicloHasta:      extractStr(/al\s+(\d{2}\/\d{2}\/\d{4})/i),
-    lineaCredito:    extractNum(/l[ií]nea de cr[eé]dito actual[^:]*?[:\s]+([\d,. ]+)/i),
-    saldoDisponible: extractNum(/saldo disponible[^:]*?[:\s]+([\d,. ]+)/i),
-    lineaUtilizada:  0,
-    ultimoDiaPago:   extractStr(/[uú]ltimo d[ií]a de pago[:\s]+(\d{2}\/\d{2}\/\d{4})/i),
-    totalSoles:      extractNum(/total[^$\n]*?S\/[:\s]*([\d,. ]+)/i),
-    totalDolares:    extractNum(/total[^$\n]*?\$[:\s]*([\d,. ]+)/i),
-    pagoMinimo:      extractNum(/pago m[ií]nimo[^S\n]*?S\/[:\s]*([\d,. ]+)/i),
-    // Tasas: intentar extraer del PDF; si no, usar las conocidas de IO
-    teaSoles:    extractNum(/TEA[^%\n]{0,40}soles[^%\n]{0,20}([\d.]+)\s*%/i) || null,
-    teaDolares:  extractNum(/TEA[^%\n]{0,40}d[oó]lar[^%\n]{0,20}([\d.]+)\s*%/i) || null,
-    tnamMoratoria: extractNum(/TNAM[^%\n]{0,40}([\d.]+)\s*%/i) ||
-                   extractNum(/tasa[^%\n]{0,40}moratoria[^%\n]{0,40}([\d.]+)/i) || null,
+    // Línea de crédito: formato BCP IO "Tu línea de crédito actual es: S/8,000.00"
+    lineaCredito:    extractNum(/l[ií]nea de cr[eé]dito actual[^:\n]*:\s*S\/\s*([\d,.]+)/i)
+                  || extractNum(/l[ií]nea de cr[eé]dito[^:\n]*:\s*S\/\s*([\d,.]+)/i),
+    // Saldo disponible: "Tu saldo disponible al 25/05/2026 es: S/5,742.55"
+    saldoDisponible: extractNum(/saldo disponible[^:\n]*:\s*S\/\s*([\d,.]+)/i)
+                  || extractNum(/saldo disponible[^S\n]*S\/\s*([\d,.]+)/i),
+    // Línea utilizada: extraer directo, si no calcular
+    lineaUtilizada:  extractNum(/l[ií]nea de cr[eé]dito utilizada[^:\n]*:\s*S\/\s*([\d,.]+)/i),
+    // Último día de pago: acepta "Viernes 12 jun 26" o DD/MM/YYYY
+    ultimoDiaPago:   extractStr(/[uú]ltimo d[ií]a de pago[\s\S]{1,40}?(\d{1,2}\s+(?:ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)\w*\.?\s*\d{2,4})/i)
+                  || extractStr(/[uú]ltimo d[ií]a de pago[:\s]+(\d{2}\/\d{2}\/\d{4})/i),
+    // Totales: "Pago total del mes S/2,158.20" / "$29.00"
+    totalSoles:      extractNum(/pago total del mes\s+S\/\s*([\d,.]+)/i)
+                  || extractNum(/total[^$\n]*?S\/[:\s]*([\d,.]+)/i),
+    totalDolares:    extractNum(/pago total del mes[^\n]{0,60}\$\s*([\d,.]+)/i)
+                  || extractNum(/total[^S\n]*?\$[:\s]*([\d,.]+)/i),
+    pagoMinimo:      extractNum(/pago m[ií]nimo\s+S\/\s*([\d,.]+)/i)
+                  || extractNum(/pago m[ií]nimo[^$\n]*?S\/[:\s]*([\d,.]+)/i),
+    pagoMinimoDolares: extractNum(/pago m[ií]nimo[^\n]{0,60}\$\s*([\d,.]+)/i),
+    // Tasas: formato BCP IO "TEA de Interés compensatorio 80.81% 76.89%"
+    teaSoles:    extractNum(/tea de inter[eé]s compensatorio\s+([\d.]+)%/i)
+              || extractNum(/TEA[^%\n]{0,40}soles[^%\n]{0,20}([\d.]+)\s*%/i) || null,
+    teaDolares:  extractNum(/tea de inter[eé]s compensatorio\s+[\d.]+%\s+([\d.]+)%/i)
+              || extractNum(/TEA[^%\n]{0,40}d[oó]lar[^%\n]{0,20}([\d.]+)\s*%/i) || null,
+    tnamMoratoria: extractNum(/tea de inter[eé]s moratorio\s+([\d.]+)%/i)
+                || extractNum(/TNAM[^%\n]{0,40}([\d.]+)\s*%/i)
+                || extractNum(/tasa[^%\n]{0,40}moratoria[^%\n]{0,40}([\d.]+)/i) || null,
+    tnamMoratoriaDolares: extractNum(/tea de inter[eé]s moratorio\s+[\d.]+%\s+([\d.]+)%/i) || null,
     tceaSoles:   extractNum(/TCEA[^%\n]{0,40}soles[^%\n]{0,20}([\d.]+)\s*%/i) || null,
   }
-  resumen.lineaUtilizada = Math.max(0, resumen.lineaCredito - resumen.saldoDisponible)
+  // Calcular línea utilizada si no se extrajo del PDF
+  if (!resumen.lineaUtilizada) {
+    resumen.lineaUtilizada = Math.max(0, resumen.lineaCredito - resumen.saldoDisponible)
+  }
 
   // Si no encontró tasas en el PDF y es banco IO/BCP, usar las conocidas
   if ((banco === 'io' || banco === 'bcp') && !resumen.tnamMoratoria) {
@@ -269,7 +289,7 @@ const parsearEstadoCuentaTC = (text: string, cats: Categoria[], banco: string): 
   const parsePlanCuotas = (txt: string): CuotaFutura[] => {
     if (!txt) return []
     // Busca filas con periodo (MES-AÑO), descripción, número cuota, montos
-    const PERIODO_RX = /\b(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)-?\d{2,4}\b/gi
+    const PEP��DO_RX = /\b(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)-?\d{2,4}\b/gi
     const positions: { idx: number; token: string }[] = []
     let dm: RegExpExecArray | null
     while ((dm = PERIODO_RX.exec(txt)) !== null)
@@ -620,7 +640,7 @@ export default function ImportarPage() {
                     <select
                       value={m.categoria}
                       onChange={e => actualizarCatTC(seccion, i, e.target.value)}
-                      className={`border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-terracota w-full max-w-[140px] ${
+                      className={`border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-terracota w-full max-w[140px] ${
                         m.sinCategoria
                           ? 'border-amber-400 bg-amber-50 text-amber-900 font-bold'
                           : 'border-gray-200 bg-white text-gray-700'
@@ -672,7 +692,7 @@ export default function ImportarPage() {
                   <td className="py-2 px-3 text-right font-bold text-xs text-blue-600 whitespace-nowrap">
                     {c.dolares > 0 ? `$ ${c.dolares.toFixed(2)}` : <span className="text-gray-300">—</span>}
                   </td>
-                </tr>
+                 </tr>
               ))}
             </tbody>
           </table>
@@ -841,90 +861,129 @@ export default function ImportarPage() {
                 </div>
               </div>
 
-              {/* Línea de crédito - 3 cajitas */}
-              {(estadoTC.resumen.lineaCredito > 0 || estadoTC.resumen.saldoDisponible > 0 || estadoTC.resumen.lineaUtilizada > 0) ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                  {estadoTC.resumen.lineaCredito > 0 ? (
-                    <div className="bg-white/10 rounded-2xl p-4">
-                      <p className="text-xs text-amber-300 mb-1">Tu línea de crédito actual es:</p>
-                      <p className="font-black text-2xl text-white">S/ {estadoTC.resumen.lineaCredito.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                    </div>
-                  ) : null}
-                  {estadoTC.resumen.saldoDisponible > 0 ? (
-                    <div className="bg-white/10 rounded-2xl p-4">
-                      <p className="text-xs text-amber-300 mb-1">Tu saldo disponible al {estadoTC.resumen.cicloHasta} es:</p>
-                      <p className="font-black text-2xl text-green-400">S/ {estadoTC.resumen.saldoDisponible.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                    </div>
-                  ) : null}
-                  {estadoTC.resumen.lineaUtilizada > 0 ? (
-                    <div className="bg-white/10 rounded-2xl p-4">
-                      <p className="text-xs text-amber-300 mb-1">Tu línea utilizada al {estadoTC.resumen.cicloHasta} es:</p>
-                      <p className="font-black text-2xl text-red-300">S/ {estadoTC.resumen.lineaUtilizada.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {/* Último día de pago + totales */}
-              {estadoTC.resumen.ultimoDiaPago ? (
-                <div className="flex flex-wrap gap-3 mb-4">
-                  <div className="bg-white/10 rounded-2xl p-4 flex flex-col items-center justify-center">
-                    <p className="text-xs font-bold text-amber-300 uppercase mb-2">Último día de pago</p>
-                    <p className="font-black text-base text-white">{estadoTC.resumen.ultimoDiaPago}</p>
+              {/* — BLOQUE 1: Línea de crédito — 3 cuadros horizontales */}
+              {(estadoTC.resumen.lineaCredito > 0 || estadoTC.resumen.saldoDisponible > 0) && (
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="bg-white/10 rounded-xl p-3">
+                    <p className="text-amber-300 text-xs mb-1">Tu línea de crédito actual es:</p>
+                    <p className="font-black text-base">
+                      {estadoTC.resumen.lineaCredito > 0
+                        ? `S/ ${estadoTC.resumen.lineaCredito.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`
+                        : '—'}
+                    </p>
                   </div>
-                  <div className="flex-1 bg-white/10 rounded-2xl p-4">
-                    <div className="flex gap-4 flex-wrap">
-                      <div className="flex-1">
-                        <p className="text-xs font-bold text-white uppercase mb-1">Pago total soles</p>
-                        <p className="font-black text-xl text-white">S/ {estadoTC.resumen.totalSoles.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                        <p className="text-xs font-bold text-white uppercase mt-2 mb-1">Pago mínimo</p>
-                        <p className="font-bold text-base text-white">S/ {estadoTC.resumen.pagoMinimo.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                      </div>
-                      {estadoTC.resumen.totalDolares > 0 ? (
-                        <div className="flex-1 border-l border-white/20 pl-4">
-                          <p className="text-xs font-bold text-white uppercase mb-1">Pago total dólares</p>
-                          <p className="font-black text-xl text-white">USD {estadoTC.resumen.totalDolares.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                        </div>
-                      ) : null}
-                    </div>
+                  <div className="bg-white/10 rounded-xl p-3">
+                    <p className="text-amber-300 text-xs mb-1">
+                      Tu saldo disponible{estadoTC.resumen.cicloHasta ? ` al ${estadoTC.resumen.cicloHasta}` : ''} es:
+                    </p>
+                    <p className="font-black text-base text-green-300">
+                      {estadoTC.resumen.saldoDisponible > 0
+                        ? `S/ ${estadoTC.resumen.saldoDisponible.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`
+                        : '—'}
+                    </p>
+                  </div>
+                  <div className="bg-white/10 rounded-xl p-3">
+                    <p className="text-amber-300 text-xs mb-1">
+                      Tu línea utilizada{estadoTC.resumen.cicloHasta ? ` al ${estadoTC.resumen.cicloHasta}` : ''} es:
+                    </p>
+                    <p className="font-black text-base text-red-300">
+                      {estadoTC.resumen.lineaUtilizada > 0
+                        ? `S/ ${estadoTC.resumen.lineaUtilizada.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`
+                        : '—'}
+                    </p>
                   </div>
                 </div>
-              ) : null}
+              )}
 
-              {/* Tasas de interés */}
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                {estadoTC.resumen.teaSoles ? (
-                  <div className="bg-white/10 rounded-xl p-3">
-                    <p className="text-amber-300 text-xs mb-1">📊 TEA compensatoria</p>
-                    <p className="font-black text-sm">{estadoTC.resumen.teaSoles.toFixed(2)}% anual</p>
-                    <p className="text-amber-300 text-xs">Soles</p>
+              {/* — BLOQUE 2: Información de pago — 3 cuadros */}
+              {(estadoTC.resumen.ultimoDiaPago || estadoTC.resumen.totalSoles > 0 || estadoTC.resumen.totalDolares > 0) && (
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="bg-red-500/40 rounded-xl p-3 border border-red-400/50">
+                    <p className="text-amber-300 text-xs mb-1">Último día de pago</p>
+                    <p className="font-black text-base">{estadoTC.resumen.ultimoDiaPago || '—'}</p>
                   </div>
-                ) : (banco === 'io' || banco === 'bcp') ? (
                   <div className="bg-white/10 rounded-xl p-3">
-                    <p className="text-amber-300 text-xs mb-1">📊 TEA compensatoria</p>
-                    <p className="font-black text-sm">{TASAS_IO.teaSolesMin}% – {TASAS_IO.teaSolesMax}%</p>
-                    <p className="text-amber-300 text-xs">Soles (rango IO)</p>
+                    <p className="text-amber-300 text-xs mb-2 font-bold">SOLES</p>
+                    <p className="text-amber-200 text-xs">Pago total</p>
+                    <p className="font-black text-base">
+                      {estadoTC.resumen.totalSoles > 0 ? `S/ ${estadoTC.resumen.totalSoles.toFixed(2)}` : '—'}
+                    </p>
+                    {estadoTC.resumen.pagoMinimo > 0 && (
+                      <>
+                        <p className="text-amber-200 text-xs mt-2">Pago mínimo</p>
+                        <p className="font-bold text-sm text-yellow-300">S/ {estadoTC.resumen.pagoMinimo.toFixed(2)}</p>
+                      </>
+                    )}
                   </div>
-                ) : null}
-                {(estadoTC.resumen.tnamMoratoria || (banco === 'io' || banco === 'bcp')) && (
                   <div className="bg-white/10 rounded-xl p-3">
-                    <p className="text-amber-300 text-xs mb-1">🚨 Tasa moratoria</p>
-                    <p className="font-black text-sm">{(estadoTC.resumen.tnamMoratoria ?? TASAS_IO.tnamMoratoriaSoles).toFixed(2)}%</p>
-                    <p className="text-amber-300 text-xs">TNAM anual (por mora)</p>
+                    <p className="text-amber-300 text-xs mb-2 font-bold">DÓLARES</p>
+                    <p className="text-amber-200 text-xs">Pago total</p>
+                    <p className="font-black text-base">
+                      {estadoTC.resumen.totalDolares > 0 ? `$ ${estadoTC.resumen.totalDolares.toFixed(2)}` : '—'}
+                    </p>
+                    {estadoTC.resumen.pagoMinimoDolares > 0 && (
+                      <>
+                        <p className="text-amber-200 text-xs mt-2">Pago mínimo</p>
+                        <p className="font-bold text-sm text-yellow-300">$ {estadoTC.resumen.pagoMinimoDolares.toFixed(2)}</p>
+                      </>
+                    )}
                   </div>
-                )}
+                </div>
+              )}
+
+              {/* — BLOQUE 3: Tasas de interés — tabla grande */}
+              <div className="bg-white/10 rounded-xl p-4 mb-3">
+                <div className="grid grid-cols-3 gap-2 text-xs mb-2">
+                  <div className="text-amber-300 font-bold uppercase">Tasas</div>
+                  <div className="text-amber-300 font-bold uppercase text-center">Soles</div>
+                  <div className="text-amber-300 font-bold uppercase text-center">Dólares</div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-xs py-2 border-t border-white/20 items-center">
+                  <div>
+                    <p className="font-bold text-white">TEA de Interés compensatorio</p>
+                    <p className="text-amber-200 mt-0.5 leading-tight">Se genera si no pagas el total</p>
+                  </div>
+                  <div className="text-center font-black text-white text-sm">
+                    {estadoTC.resumen.teaSoles
+                      ? `${estadoTC.resumen.teaSoles.toFixed(2)}%`
+                      : (banco === 'io' || banco === 'bcp') ? `${TASAS_IO.teaSolesMin}%–${TASAS_IO.teaSolesMax}%` : '—'}
+                  </div>
+                  <div className="text-center font-black text-white text-sm">
+                    {estadoTC.resumen.teaDolares
+                      ? `${estadoTC.resumen.teaDolares.toFixed(2)}%`
+                      : (banco === 'io' || banco === 'bcp') ? `${TASAS_IO.teaDolaresMin}%–${TASAS_IO.teaDolaresMax}%` : '—'}
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-xs py-2 border-t border-white/20 items-center">
+                  <div>
+                    <p className="font-bold text-white">TEA de Interés moratorio</p>
+                    <p className="text-amber-200 mt-0.5 leading-tight">Se cobra si pagas después del límite</p>
+                  </div>
+                  <div className="text-center font-black text-white text-sm">
+                    {estadoTC.resumen.tnamMoratoria
+                      ? `${estadoTC.resumen.tnamMoratoria.toFixed(2)}%`
+                      : (banco === 'io' || banco === 'bcp') ? `${TASAS_IO.tnamMoratoriaSoles}%` : '—'}
+                  </div>
+                  <div className="text-center font-black text-white text-sm">
+                    {estadoTC.resumen.tnamMoratoriaDolares
+                      ? `${estadoTC.resumen.tnamMoratoriaDolares.toFixed(2)}%`
+                      : (banco === 'io' || banco === 'bcp') ? `${TASAS_IO.tnamMoratoriaDolares}%` : '—'}
+                  </div>
+                </div>
               </div>
 
               {/* Advertencia pago mínimo */}
-              <div className="bg-red-500/25 border border-red-400/40 rounded-xl p-3 text-sm">
-                <p className="font-bold mb-1">⚠️ Importante sobre el pago mínimo</p>
-                <p className="text-amber-100 text-xs leading-relaxed">
-                  Si solo pagas el mínimo (S/ {estadoTC.resumen.pagoMinimo.toFixed(2)}), el saldo restante 
-                  de S/ {(estadoTC.resumen.totalSoles - estadoTC.resumen.pagoMinimo).toFixed(2)} generará intereses 
-                  al {(estadoTC.resumen.tnamMoratoria ?? TASAS_IO.tnamMoratoriaSoles).toFixed(2)}% TNAM en el siguiente ciclo.
-                  <b className="ml-1">¡Llamín te recomienda pagar el total!</b>
-                </p>
-              </div>
+              {estadoTC.resumen.pagoMinimo > 0 && estadoTC.resumen.totalSoles > 0 && (
+                <div className="bg-red-500/25 border border-red-400/40 rounded-xl p-3 text-sm">
+                  <p className="font-bold mb-1">Importante sobre el pago mínimo</p>
+                  <p className="text-amber-100 text-xs leading-relaxed">
+                    Si solo pagas el mínimo (S/ {estadoTC.resumen.pagoMinimo.toFixed(2)}), el saldo restante
+                    de S/ {(estadoTC.resumen.totalSoles - estadoTC.resumen.pagoMinimo).toFixed(2)} generará intereses
+                    al {(estadoTC.resumen.tnamMoratoria ?? TASAS_IO.tnamMoratoriaSoles).toFixed(2)}% TEA en el siguiente ciclo.
+                    <b className="ml-1">Llamín te recomienda pagar el total.</b>
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Aviso de categorías pendientes */}
@@ -1013,38 +1072,4 @@ export default function ImportarPage() {
                 className="flex-1 border-2 border-gray-300 text-gray-600 font-bold py-3 rounded-xl hover:border-terracota hover:text-terracota transition-all">← Volver</button>
               <button onClick={guardar}
                 className="flex-1 bg-terracota text-white font-black py-3 rounded-xl hover:opacity-90 transition-all shadow-lg">
-                ✅ Guardar {filas.length} movimientos
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* ── GUARDANDO ── */}
-        {paso === 'guardando' && (
-          <div className="text-center py-20">
-            <LlaminMascot expresion="analizando" size={100} className="mx-auto mb-4 animate-pulse" />
-            <p className="text-xl font-black text-marron">Guardando tus movimientos...</p>
-          </div>
-        )}
-
-        {/* ── LISTO ── */}
-        {paso === 'listo' && (
-          <div className="text-center py-12">
-            <LlaminMascot expresion="emocionada" size={120} className="mx-auto mb-4" />
-            <h2 className="text-2xl font-black text-marron mb-2">¡Todo listo! 🎉</h2>
-            <p className="text-gray-600 mb-6">Se guardaron {totalMovimientos} movimientos. ¡Llamín está feliz!</p>
-            <div className="flex gap-3 justify-center flex-wrap">
-              <button onClick={() => { setFilas([]); setEstadoTC(null); setPaso('tipo') }}
-                className="border-2 border-terracota text-terracota font-bold px-6 py-3 rounded-xl hover:bg-red-50 transition-all">
-                📂 Importar otro archivo
-              </button>
-              <a href="/dashboard" className="bg-terracota text-white font-black px-6 py-3 rounded-xl hover:opacity-90 shadow-lg transition-all">
-                🏠 Ver mi dashboard
-              </a>
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
-  )
-}
+             
